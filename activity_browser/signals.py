@@ -103,6 +103,7 @@ class Signals(QObject):
     method_modified = Signal(tuple)
     method_selected = Signal(tuple)
     method_tabs_changed = Signal()
+    import_lcia = Signal()
 
     # Monte Carlo LCA
     monte_carlo_finished = Signal()

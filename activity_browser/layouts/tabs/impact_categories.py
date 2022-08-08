@@ -44,6 +44,8 @@ class MethodsTab(QtWidgets.QWidget):
     def __init__(self, parent):
         super(MethodsTab, self).__init__(parent)
 
+        self.lcia_import = QtWidgets.QPushButton(qicons.import_db, "Import")
+        self.lcia_import.setToolTip("Import a new Impact Assessment method")
         self.tree = MethodsTree(self)
         self.tree.setToolTip(
             "Drag (groups of) impact categories to the calculation setup")
@@ -84,8 +86,9 @@ class MethodsTab(QtWidgets.QWidget):
         search_layout.addWidget(self.reset_search_button)
         #
         mode_layout = QtWidgets.QHBoxLayout()
-        mode_layout.setAlignment(QtCore.Qt.AlignTop)
-        mode_layout.addWidget(header('Impact Categories'))
+        mode_layout.setAlignment(QtCore.Qt.AlignLeft)
+        mode_layout.addWidget(header('Impact Categories:'))
+        mode_layout.addWidget(self.lcia_import)
         search_layout.addWidget(self.mode_radio_tree)
         search_layout.addWidget(self.mode_radio_list)
         #
@@ -121,6 +124,7 @@ class MethodsTab(QtWidgets.QWidget):
 
     def connect_signals(self):
         self.mode_radio_list.toggled.connect(self.update_view)
+        self.lcia_import.clicked.connect(signals.import_lcia.emit)
 
     @QtCore.Slot(tuple, name="searchCopiedMethod")
     def method_copied(self, method: tuple) -> None:

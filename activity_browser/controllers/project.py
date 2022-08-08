@@ -200,6 +200,7 @@ class ImpactCategoryController(QObject):
         signals.copy_method.connect(self.copy_method)
         signals.edit_method_cf.connect(self.modify_method_with_cf)
         signals.remove_cf_uncertainties.connect(self.remove_uncertainty)
+        signals.import_lcia.connect(self.import_lcia_prompt)
 
     @Slot(tuple, name="copyMethod")
     def copy_method(self, method: tuple) -> None:
@@ -258,3 +259,69 @@ class ImpactCategoryController(QObject):
             cfs[idx] = cf
         method.write(cfs)
         signals.method_modified.emit(method.name)
+
+    @Slot(name="openLCIASelect")
+    def import_lcia_prompt(self) -> None:
+        """Start the lcia import prompt."""
+        self.lcia_dialog = QtWidgets.QDialog()
+        self.lcia_dialog.setWindowTitle('Select file to import')
+
+        filePrompt = QtWidgets.QWidget()
+        filePrompt.layout = QtWidgets.QHBoxLayout()
+
+        self.lcia_text_input = QtWidgets.QLineEdit()
+        self.lcia_text_input.setFixedWidth(200)
+        self.lcia_text_input.setReadOnly(True)
+
+        filePrompt.layout.addWidget(self.lcia_text_input)
+        import_excel = QtWidgets.QPushButton("Excel sheet")
+        import_excel.setToolTip("Select an Excel file to import")
+        import_excel.clicked.connect(lambda _: self.import_lcia_dialog(False))
+        import_csv = QtWidgets.QPushButton("CSV file")
+        import_csv.setToolTip("Select a CSV file to import")
+        import_csv.clicked.connect(lambda _: self.import_lcia_dialog(True))
+        filePrompt.layout.addWidget(import_excel)
+        filePrompt.layout.addWidget(import_csv)
+        filePrompt.setLayout(filePrompt.layout)
+
+        buttons = QtWidgets.QWidget()
+        buttons.layout = QtWidgets.QHBoxLayout()
+        btn_import = QtWidgets.QPushButton("Import")
+        btn_import.clicked.connect(self.import_lcia_file)
+        btn_cancel = QtWidgets.QPushButton("Cancel")
+        btn_cancel.clicked.connect(lambda _: self.lcia_dialog.close())
+        buttons.layout.addWidget(btn_import)
+        buttons.layout.addWidget(btn_cancel)
+        buttons.setLayout(buttons.layout)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(QtWidgets.QLabel('Please select a file to import.'))
+        layout.addWidget(filePrompt)
+        layout.addWidget(buttons)
+
+        self.lcia_dialog.setLayout(layout)
+
+        self.lcia_dialog.exec_()
+
+    def import_lcia_dialog(self, isCSV) -> None:
+        """Show the prompt to select a file"""
+        dialog = QtWidgets.QFileDialog()
+        filters = ["Excel spreadsheets (*.xls*)", "Text CSV files (*.tsv)"]
+        if isCSV:
+            filters = filters[::-1]
+        dialog.setNameFilters(filters)
+        # dialog.setParent(self.lcia_dialog)
+        if dialog.exec_():
+            path = dialog.selectedFiles()[0]
+            self.lcia_text_input.setText(path)
+            self.lcia_text_input.setToolTip(path)
+        else:
+            self.lcia_text_input.setText('')
+            self.lcia_text_input.setToolTip("")
+        print(dialog.selectedFiles())
+
+    def import_lcia_file(self) -> None:
+        """Start importing a LCIA file"""
+        self.lcia_dialog.close()
+        print(self.lcia_text_input.text())
+        #TODO
