@@ -269,20 +269,91 @@ class ImpactCategoryController(QObject):
         filePrompt = QtWidgets.QWidget()
         filePrompt.layout = QtWidgets.QHBoxLayout()
 
+        filetype = QtWidgets.QGroupBox("File type of import:")
+        filetype.layout = QtWidgets.QVBoxLayout()
+        self.lcia_radio_buttons = [
+            QtWidgets.QRadioButton("Excel sheet"),
+            QtWidgets.QRadioButton("CSV file")
+        ]
+        self.lcia_radio_buttons[0].setChecked(True)
+        filetype.layout.addWidget(self.lcia_radio_buttons[0])
+        filetype.layout.addWidget(self.lcia_radio_buttons[1])
+        filetype.setLayout(filetype.layout)
+
         self.lcia_text_input = QtWidgets.QLineEdit()
         self.lcia_text_input.setFixedWidth(200)
         self.lcia_text_input.setReadOnly(True)
 
         filePrompt.layout.addWidget(self.lcia_text_input)
+        select_file = QtWidgets.QPushButton("Browse")
+        select_file.clicked.connect(self.import_lcia_dialog)
+
         import_excel = QtWidgets.QPushButton("Excel sheet")
         import_excel.setToolTip("Select an Excel file to import")
         import_excel.clicked.connect(lambda _: self.import_lcia_dialog(False))
         import_csv = QtWidgets.QPushButton("CSV file")
         import_csv.setToolTip("Select a CSV file to import")
         import_csv.clicked.connect(lambda _: self.import_lcia_dialog(True))
-        filePrompt.layout.addWidget(import_excel)
-        filePrompt.layout.addWidget(import_csv)
+        filePrompt.layout.addWidget(select_file)
+        # filePrompt.layout.addWidget(import_csv)
         filePrompt.setLayout(filePrompt.layout)
+
+        buttons = QtWidgets.QWidget()
+        buttons.layout = QtWidgets.QHBoxLayout()
+        btn_import = QtWidgets.QPushButton("Import")
+        btn_import.clicked.connect(self.specify_lcia_properties)
+        btn_cancel = QtWidgets.QPushButton("Cancel")
+        btn_cancel.clicked.connect(lambda _: self.lcia_dialog.close())
+        buttons.layout.addWidget(btn_import)
+        buttons.layout.addWidget(btn_cancel)
+        buttons.setLayout(buttons.layout)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(QtWidgets.QLabel('Please select a file to import.'))
+        layout.addWidget(filetype)
+        layout.addWidget(filePrompt)
+        layout.addWidget(buttons)
+
+        self.lcia_dialog.setLayout(layout)
+
+        self.lcia_dialog.exec_()
+
+    def specify_lcia_properties(self) -> None:
+        if self.lcia_text_input.text() == '':
+            box = QtWidgets.QMessageBox()
+            box.setWindowTitle("Error")
+            box.setText("Please select a file.")
+            box.exec_()
+            return
+        self.lcia_dialog.close()
+        # dialog is now closed; overwrite self.lcia_dialog so that further methods can close it.
+        self.lcia_dialog = QtWidgets.QDialog()
+        self.lcia_dialog.setWindowTitle('Specify details about Impact Category')
+
+        # name, description, unit
+        name = QtWidgets.QWidget()
+        name.setToolTip("Enter the name hierarchy of the impact category; separate different values with commas")
+        name.layout = QtWidgets.QHBoxLayout()
+        name.label = QtWidgets.QLabel('Name (comma-separated)*')
+        name.layout.addWidget(name.label)
+        self.lcia_name = QtWidgets.QLineEdit()
+        self.lcia_name.setFixedWidth(200)
+        name.layout.addWidget(self.lcia_name)
+        name.setLayout(name.layout)
+        description = QtWidgets.QWidget()
+        description.setToolTip("Enter a description of the impact category")
+        description.layout = QtWidgets.QHBoxLayout()
+        description.layout.addWidget(QtWidgets.QLabel("Description"))
+        self.lcia_description = QtWidgets.QLineEdit()
+        description.layout.addWidget(self.lcia_description)
+        description.setLayout(description.layout)
+        unit = QtWidgets.QWidget()
+        unit.setToolTip("Specify the unit for this imopact category")
+        unit.layout = QtWidgets.QHBoxLayout()
+        unit.layout.addWidget(QtWidgets.QLabel("Unit*"))
+        self.lcia_unit = QtWidgets.QLineEdit()
+        unit.layout.addWidget(self.lcia_unit)
+        unit.setLayout(unit.layout)
 
         buttons = QtWidgets.QWidget()
         buttons.layout = QtWidgets.QHBoxLayout()
@@ -295,18 +366,19 @@ class ImpactCategoryController(QObject):
         buttons.setLayout(buttons.layout)
 
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(QtWidgets.QLabel('Please select a file to import.'))
-        layout.addWidget(filePrompt)
+        layout.addWidget(name)
+        layout.addWidget(description)
+        layout.addWidget(unit)
         layout.addWidget(buttons)
 
         self.lcia_dialog.setLayout(layout)
-
         self.lcia_dialog.exec_()
 
-    def import_lcia_dialog(self, isCSV) -> None:
+    def import_lcia_dialog(self) -> None:
         """Show the prompt to select a file"""
         dialog = QtWidgets.QFileDialog()
         filters = ["Excel spreadsheets (*.xls*)", "Text CSV files (*.tsv)"]
+        isCSV = [b.isChecked() for b in self.lcia_radio_buttons].index(True) == 1
         if isCSV:
             filters = filters[::-1]
         dialog.setNameFilters(filters)
@@ -322,6 +394,21 @@ class ImpactCategoryController(QObject):
 
     def import_lcia_file(self) -> None:
         """Start importing a LCIA file"""
+        name = self.lcia_name.text().strip()
+        description = self.lcia_description.text().strip()
+        unit = self.lcia_unit.text().strip()
+        if name == '' or unit == '':
+            box = QtWidgets.QMessageBox()
+            box.setWindowTitle("Error")
+            box.setText("You need to fill in all mandatory fields (marked with *)")
+            box.exec_()
+            return
+        path = self.lcia_text_input.text()
+        ext = path.split('.')[-1]
+        print(path, ext)
         self.lcia_dialog.close()
-        print(self.lcia_text_input.text())
-        #TODO
+        importInfo = (path, tuple(name.split(',')), description, unit)
+        if ext == 'xls' or ext == 'xlsx':
+            bw.ExcelLCIAImporter(*importInfo)
+        elif ext == 'csv':
+            bw.CSVLCIAImporter(*importInfo)
