@@ -350,8 +350,9 @@ class ImpactCategoryController(QObject):
         unit = QtWidgets.QWidget()
         unit.setToolTip("Specify the unit for this imopact category")
         unit.layout = QtWidgets.QHBoxLayout()
-        unit.layout.addWidget(QtWidgets.QLabel("Unit*"))
+        unit.layout.addWidget(QtWidgets.QLabel("Unit"))
         self.lcia_unit = QtWidgets.QLineEdit()
+        self.lcia_unit.setPlaceholderText("unknown")
         unit.layout.addWidget(self.lcia_unit)
         unit.setLayout(unit.layout)
 
@@ -397,10 +398,12 @@ class ImpactCategoryController(QObject):
         name = self.lcia_name.text().strip()
         description = self.lcia_description.text().strip()
         unit = self.lcia_unit.text().strip()
-        if name == '' or unit == '':
+        if len(unit) == '':
+            unit = 'unknown'
+        if name == '':
             box = QtWidgets.QMessageBox()
             box.setWindowTitle("Error")
-            box.setText("You need to fill in all mandatory fields (marked with *)")
+            box.setText("Please enter an impact category name")
             box.exec_()
             return
         path = self.lcia_text_input.text()
@@ -409,6 +412,7 @@ class ImpactCategoryController(QObject):
         self.lcia_dialog.close()
         importInfo = (path, tuple(name.split(',')), description, unit)
         if ext == 'xls' or ext == 'xlsx':
-            bw.ExcelLCIAImporter(*importInfo)
+            method = bw.ExcelLCIAImporter(*importInfo)
         elif ext == 'csv':
-            bw.CSVLCIAImporter(*importInfo)
+            method = bw.CSVLCIAImporter(*importInfo)
+        method.write_methods()
